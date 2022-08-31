@@ -1,0 +1,36 @@
+{
+    "required":true,
+    "minVersion":"0.8",
+    "package":"com.prgmTrouble.item_assistant.mixin",
+    "compatibilityLevel":"JAVA_16",
+    "mixins":
+    [
+        "AbstractFurnaceBlockEntityMixin",
+        "BlockInventoryMixin",
+        "BrewingStandBlockEntityMixin",
+        "CampfireBlockEntityMixin",
+        "ClearableMixin",
+        "CommandManagerMixin",
+        "EntityInventoryMixin",
+        "EntityMixin",
+        "HopperBlockEntityMixin",
+        "InvStackListMixin",
+        "ItemCommandMixin",
+        "ItemEntityMixin",
+        "ItemStackMixin",
+        "LootCommandMixin",
+        "MinecraftServerMixin",
+        "NbtCompoundMixin",
+        "NBTFillMixin",
+        "NbtListMixin",
+        "NbtTextMixin",
+        "NotHopperBEMixin",
+        "ScreenHandlerMixin",
+        "ShulkerBoxBlockEntityMixin",
+        "StyleMixin",
+        "WorldChunkAccessor",
+        "WorldChunkMixin"
+    ],
+    "client":[],
+    "injectors":{"defaultRequire":1}
+}
