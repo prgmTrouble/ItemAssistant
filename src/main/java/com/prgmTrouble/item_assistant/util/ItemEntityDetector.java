@@ -144,7 +144,7 @@ public final class ItemEntityDetector
             if(!l.whitelist.isEmpty() && !l.whitelist.contains(item))
                 broadcast
                 (
-                    world,
+                    world.getServer(),
                     hoverClick
                     (
                         text("Un-whitelisted detected: ",TEXT).
@@ -158,7 +158,7 @@ public final class ItemEntityDetector
             if(!l.blacklist.isEmpty() && l.blacklist.contains(item))
                 broadcast
                 (
-                    world,
+                    world.getServer(),
                     hoverClick
                     (
                         text("Blacklisted item detected: ",TEXT).

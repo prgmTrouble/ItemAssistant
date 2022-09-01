@@ -7,6 +7,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import org.apache.logging.log4j.LogManager;
 
 import static com.mojang.brigadier.arguments.IntegerArgumentType.getInteger;
 import static com.mojang.brigadier.arguments.IntegerArgumentType.integer;
@@ -149,8 +150,11 @@ public final class InventoryInspectorCommand
     
     private static int tickNext(final CommandContext<ServerCommandSource> c)
     {
+        try{
         for(final Text t : nextTick(c.getSource().getWorld()))
             c.getSource().sendFeedback(t,false);
+        } catch(final Exception e) {
+            LogManager.getLogger().error("exception",e);}
         return 1;
     }
     private static int tickPrev(final CommandContext<ServerCommandSource> c)
@@ -174,6 +178,28 @@ public final class InventoryInspectorCommand
     private static int resetAll(final CommandContext<ServerCommandSource> c)
     {
         c.getSource().sendFeedback(reset(),false);
+        return 1;
+    }
+    private static int fileClear(final CommandContext<ServerCommandSource> c)
+    {
+        final ServerCommandSource src = c.getSource();
+        src.sendFeedback(clearFiles(src.getWorld()),false);
+        return 1;
+    }
+    
+    private static int printMaxSize(final CommandContext<ServerCommandSource> c)
+    {
+        c.getSource().sendFeedback(getMaxSize(),false);
+        return 1;
+    }
+    private static int maxSize(final CommandContext<ServerCommandSource> c)
+    {
+        c.getSource().sendFeedback(setMaxSize((long)getInteger(c,"size")<<30),false);
+        return 1;
+    }
+    private static int currentSpaceUsed(final CommandContext<ServerCommandSource> c)
+    {
+        c.getSource().sendFeedback(currentSize(),false);
         return 1;
     }
     
@@ -317,6 +343,26 @@ public final class InventoryInspectorCommand
                 (
                     literal("reset").
                         executes(InventoryInspectorCommand::resetAll)
+                ).
+                then
+                (
+                    literal("clearFiles").
+                        executes(InventoryInspectorCommand::fileClear)
+                ).
+                then
+                (
+                    literal("maxSize").
+                        executes(InventoryInspectorCommand::printMaxSize).
+                        then
+                        (
+                            argument("size",integer(1)).
+                                executes(InventoryInspectorCommand::maxSize)
+                        )
+                ).
+                then
+                (
+                    literal("currentSize").
+                        executes(InventoryInspectorCommand::currentSpaceUsed)
                 )
         );
     }

@@ -1,5 +1,6 @@
 package com.prgmTrouble.item_assistant.util;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -64,9 +65,9 @@ public final class TextUtil
     {
         for(final Text t : msg) s.sendFeedback(t,false);
     }
-    public static void broadcast(final ServerWorld w,final Text...msg)
+    public static void broadcast(final MinecraftServer s,final Text...msg)
     {
-        for(final ServerPlayerEntity p : w.getServer().getPlayerManager().getPlayerList())
+        for(final ServerPlayerEntity p : s.getPlayerManager().getPlayerList())
             for(final Text t : msg)
                 p.sendMessage(t,false);
     }

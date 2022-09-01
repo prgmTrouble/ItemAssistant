@@ -1,7 +1,6 @@
 package com.prgmTrouble.item_assistant.mixin;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.prgmTrouble.item_assistant.command.ChunkFill;
 import com.prgmTrouble.item_assistant.command.InventoryInspectorCommand;
 import com.prgmTrouble.item_assistant.command.ItemEntityCheckpointCommand;
 import com.prgmTrouble.item_assistant.command.NameCleanseCommand;
@@ -25,6 +24,5 @@ public abstract class CommandManagerMixin
         ItemEntityCheckpointCommand.register(dispatcher);
         InventoryInspectorCommand.register(dispatcher);
         NameCleanseCommand.register(dispatcher);
-        ChunkFill.register(dispatcher);
     }
 }

@@ -30,6 +30,6 @@ To step forward or backward in the replay, use the `next` or `previous` keywords
  - The `reset` keyword removes all monitors and playbacks.
  - Specifying the `monitor` keyword without any other arguments shows a list of all active monitors. Similarly, specifying the `replay` keyword without any other arguments shows a list of all active playbacks.
  - Specifying the `replay` keyword and the block position, entity selector, or UUID of a monitor shows the location of the associated with the specified monitor.
-
-# Warning
-This mod writes data to files when monitors are recording modifications. If left on for too long without supervision, your storage device might run out of space. At the moment, this mod makes no attempt to limit the amount of data written to its files. However, restarting the server will delete the files.
+ - The `clearFiles` keyword clears all files, but keeps the monitors and playbacks.
+ - The `maxSize` keyword allows you to view/set a soft limit on the amount of disk space that the command will write. Any modifications after the limit is exceeded will be discarded. The default limit is 4GB.
+ - The `currentSize` keyword allows you to see the estimated current disk space that the command is using.

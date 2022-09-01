@@ -27,8 +27,7 @@ import java.nio.charset.Charset;
 import java.util.*;
 import java.util.Map.Entry;
 
-import static com.prgmTrouble.item_assistant.util.TextUtil.hoverClick;
-import static com.prgmTrouble.item_assistant.util.TextUtil.text;
+import static com.prgmTrouble.item_assistant.util.TextUtil.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.minecraft.nbt.NbtElement.*;
 
@@ -37,14 +36,48 @@ public final class InventoryInspector
     private InventoryInspector() {}
     
     public static MinecraftServer SERVER;
-    
     private static final Charset CHARSET = UTF_8;
     private static final File  FILE_DIR = new File("./inventory_inspector/"),
                               TEXT_FILE = new File("./inventory_inspector/text.tmp"),
                                NBT_FILE = new File("./inventory_inspector/nbt.tmp"),
                               ITEM_FILE = new File("./inventory_inspector/items.tmp"),
                               MODS_FILE = new File("./inventory_inspector/modifications.tmp");
-    static
+    private static final Style TEXT = Style.EMPTY.withColor(Formatting.GRAY),
+                                NUM = Style.EMPTY.withColor(Formatting.GOLD);
+    private static final Text CLICK_REMOVE = text("Click to remove",TEXT),
+                              CLICK_ADD = text("Click to add",TEXT),
+                              CLICK_JUMP = text("Click to jump to event",TEXT),
+                              CLICK_BACK = text("Click to go back",TEXT),
+                              CLICK_TELEPORT = text("Click to teleport",TEXT),
+                              NO_MONITORS = text("No monitors exist",TEXT),
+                              NO_REPLAY_SELECTED = text("No monitors selected for replay",TEXT),
+                              NO_EVENTS = text("No more recorded events",TEXT),
+                              RESET = text("All monitors removed",TEXT),
+                              CLEAR_FILES = text("All files wiped",TEXT),
+                              GB = text("GB",TEXT),
+                              SIZE_WARNING = hoverClick
+                              (
+                                  text
+                                  (
+                                      "WARNING: Files exceeded size limit. No further modifications will be recorded.",
+                                      Style.EMPTY.withColor(Formatting.RED)
+                                  ),
+                                  text("Click to clear files",TEXT),
+                                  "/inventoryInspector clearFiles"
+                              );
+    public static boolean active = true;
+    private static long maxSize = 1L<<32,currentSize = 0L;
+    private static Text printSize(final String label,final long size)
+    {
+        return text(label,TEXT).
+            append(text((double)size/(1<<30),NUM)).
+            append(GB);
+    }
+    public static Text getMaxSize() {return printSize("Maximum disk space set to: ",maxSize);}
+    public static Text setMaxSize(final long size) {return printSize("Maximum disk space set to: ",maxSize = size);}
+    public static Text currentSize() {return printSize("Approximate disk space consumed: ",currentSize);}
+    
+    private static void resetDir()
     {
         try
         {
@@ -73,6 +106,7 @@ public final class InventoryInspector
         }
         catch(final IOException e) {throw new UncheckedIOException(e);}
     }
+    static {resetDir();}
     private static final class Input
     {
         private final RandomAccessFile r;
@@ -139,12 +173,13 @@ public final class InventoryInspector
             i = new DataInputStream(new BufferedInputStream(fin));
         }
         void close() throws IOException {r.close();}
+        void reset() throws IOException {seek(0L);}
     }
     private static final class Output
     {
-        //TODO implement moving window
+        //TODO implement moving window?
         private final RandomAccessFile r;
-        private final DataOutputStream o;
+        private DataOutputStream o;
         long offset = 0;
         Output(final File f) throws IOException
         {
@@ -162,35 +197,49 @@ public final class InventoryInspector
         void write(final int b) throws IOException
         {
             ++offset;
+            ++currentSize;
             o.write(b);
         }
         void writeByte(final byte b) throws IOException
         {
             ++offset;
+            ++currentSize;
             o.writeByte(b);
         }
         void writeShort(final short s) throws IOException
         {
             offset += 2L;
+            currentSize += 2L;
             o.writeShort(s);
         }
         void writeInt(final int i) throws IOException
         {
             offset += 4L;
+            currentSize += 4L;
             o.writeInt(i);
         }
         void writeLong(final long l) throws IOException
         {
             offset += 8L;
+            currentSize += 8L;
             o.writeLong(l);
         }
         void writeBytes(final byte...b) throws IOException
         {
             offset += b.length;
+            currentSize += b.length;
             o.write(b);
         }
         void flush() throws IOException {o.flush();}
         void close() throws IOException {r.close();}
+        void reset() throws IOException
+        {
+            r.seek(0L);
+            r.getChannel().truncate(0L);
+            o = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(r.getFD())));
+            currentSize -= offset;
+            offset = 0;
+        }
     }
     private static final Input TEXT_IN,NBT_IN,ITEM_IN,MODS_IN;
     private static final Output TEXT_OUT,NBT_OUT,ITEM_OUT,MODS_OUT;
@@ -222,6 +271,7 @@ public final class InventoryInspector
     }
     private interface ToByteArray<T> {ConversionResult apply(T element) throws IOException;}
     
+    private static void testSize() {if(!(active = currentSize < maxSize)) broadcast(SERVER,SIZE_WARNING);}
     private static <T> long seekImpl(final T entry,final Cache<T> cache,final byte[] data,
                                      final Input in,final Output out,final int hash) throws IOException
     {
@@ -291,6 +341,7 @@ public final class InventoryInspector
         }
         final long l = write(data,hash,out);
         cache.put(entry,l);
+        testSize();
         return new SyncResult(l,true);
     }
     private static <T> boolean syncNullableImpl(final T entry,final Cache<T> cache,final ToByteArray<T> toByteArr,
@@ -1090,8 +1141,6 @@ public final class InventoryInspector
         return new Modification(type_slot,count,addr);
     }
     
-    private static final Style TEXT = Style.EMPTY.withColor(Formatting.GRAY),
-                                NUM = Style.EMPTY.withColor(Formatting.GOLD);
     private static MutableText fromPos(final Pos p) {return text(new int[] {p.x,p.y,p.z},TEXT,NUM);}
     private static MutableText fromEntity(final Entity e)
     {
@@ -1137,15 +1186,6 @@ public final class InventoryInspector
             )
         );
     }
-    private static final Text CLICK_REMOVE = text("Click to remove",TEXT),
-                              CLICK_ADD = text("Click to add",TEXT),
-                              CLICK_JUMP = text("Click to jump to event",TEXT),
-                              CLICK_BACK = text("Click to go back",TEXT),
-                              CLICK_TELEPORT = text("Click to teleport",TEXT),
-                              NO_MONITORS = text("No monitors exist",TEXT),
-                              NO_REPLAY_SELECTED = text("No monitors selected for replay",TEXT),
-                              NO_EVENTS = text("No more recorded events",TEXT),
-                              RESET = text("All monitors removed",TEXT);
     
     private static final record Monitor(File f,Input in,Output out) {}
     private static final record Pos(int x,int y,int z) {Pos(final BlockPos p) {this(p.getX(),p.getY(),p.getZ());}}
@@ -1304,28 +1344,31 @@ public final class InventoryInspector
     */
     private static void modify(final Monitor m,final Replay rp,final Modification mod)
     {
-        final int tick = SERVER.getTicks();
-        try
+        if(active)
         {
-            if(tick != currentTick)
+            final int tick = SERVER.getTicks();
+            try
             {
-                currentTick = tick;
-                order = 0;
+                if(tick != currentTick)
+                {
+                    currentTick = tick;
+                    order = 0;
+                }
+                m.out.writeInt(tick);
+                m.out.writeShort(order);
+                m.out.writeLong(sync(mod));
+                m.out.flush();
+                if(rp != null && rp.nextTick == -1)
+                {
+                    rp.nextTick = tick;
+                    rp.nextOrder = order;
+                    rp.file.readInt();
+                    rp.file.readShort();
+                }
+                ++order;
             }
-            m.out.writeInt(tick);
-            m.out.writeShort(order);
-            m.out.writeLong(sync(mod));
-            m.out.flush();
-            if(rp != null && rp.nextTick == -1)
-            {
-                rp.nextTick = tick;
-                rp.nextOrder = order;
-                rp.file.readInt();
-                rp.file.readShort();
-            }
-            ++order;
+            catch(final IOException e) {throw new UncheckedIOException(e);}
         }
-        catch(final IOException e) {throw new UncheckedIOException(e);}
     }
     
     private static Text addMonitor(final ServerWorld world,final Inventory inv,final MonitorKey k,final String file)
@@ -2089,6 +2132,23 @@ public final class InventoryInspector
         return out.toArray(Text[]::new);
     }
     
+    private static void clearCached()
+    {
+        currentTick = 0;
+        order = 0;
+        replayOrder = 0;
+        replayTick = 0;
+        blockKeyCache.clear();
+        entityKeyCache.clear();
+        cachedText.a.clear();
+        cachedText.b.clear();
+        cachedItems.a.clear();
+        cachedItems.b.clear();
+        cachedNBT.a.clear();
+        cachedNBT.b.clear();
+        cachedMods.a.clear();
+        cachedMods.b.clear();
+    }
     public static Text reset()
     {
         if(monitor.isEmpty()) return NO_MONITORS;
@@ -2114,6 +2174,45 @@ public final class InventoryInspector
             }
             itr.remove();
         }
+        resetDir();
+        clearCached();
+        active = true;
         return RESET;
+    }
+    public static Text clearFiles(final ServerWorld world)
+    {
+        clearCached();
+        try
+        {
+            TEXT_IN.reset();
+            TEXT_OUT.reset();
+            NBT_IN.reset();
+            NBT_OUT.reset();
+            ITEM_IN.reset();
+            ITEM_OUT.reset();
+            MODS_IN.reset();
+            MODS_OUT.reset();
+            for(final Entry<MonitorKey,Monitor> e : monitor.entrySet())
+            {
+                final MonitorKey k = e.getKey();
+                final Monitor v = e.getValue();
+                v.in.reset();
+                v.out.reset();
+                final Replay r = replay.get(k);
+                if(r != null) r.reset();
+                if
+                (
+                    (
+                        k.isBlock()
+                            ? world.getBlockEntity(new BlockPos(k.pos.x,k.pos.y,k.pos.z))
+                            : world.getEntity(k.uuid)
+                    ) instanceof final Inventory i
+                )
+                    modify(v,r,fill(i));
+            }
+        }
+        catch(final IOException e) {throw new UncheckedIOException(e);}
+        active = true;
+        return CLEAR_FILES;
     }
 }
